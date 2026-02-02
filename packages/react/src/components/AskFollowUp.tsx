@@ -134,6 +134,9 @@ function AskFollowUpComponent({
     });
     return defaults;
   });
+  // Track which questions have "Other" selected (for custom text input)
+  const [otherSelected, setOtherSelected] = useState<Record<string, boolean>>({});
+  const [otherText, setOtherText] = useState<Record<string, string>>({});
 
   const currentQuestion = hasQuestions ? questions[currentStep] : null;
   const isLastStep = currentStep === questions.length - 1;
@@ -199,6 +202,22 @@ function AskFollowUpComponent({
       handleNext();
     }
   }, [handleNext]);
+
+  // Skip all remaining questions and submit with current answers
+  const handleSkip = useCallback(() => {
+    const output: AskFollowUpOutput = {
+      answers,
+      completed: true,
+    };
+    completeTool({
+      tool_call_id: toolCall.tool_call_id,
+      tool_name: toolCall.tool_name,
+      parts: [{
+        part_type: 'data',
+        data: output,
+      }],
+    });
+  }, [answers, completeTool, toolCall]);
 
   // No questions - show nothing while effect completes
   if (!hasQuestions) {
@@ -295,10 +314,13 @@ function AskFollowUpComponent({
             {currentQuestion.options.map((option) => (
               <button
                 key={option}
-                onClick={() => handleAnswer(option)}
+                onClick={() => {
+                  setOtherSelected((prev) => ({ ...prev, [currentQuestion.id]: false }));
+                  handleAnswer(option);
+                }}
                 className={cn(
                   'w-full px-3 py-2 text-sm text-left border rounded-md transition-colors',
-                  answers[currentQuestion.id] === option
+                  answers[currentQuestion.id] === option && !otherSelected[currentQuestion.id]
                     ? 'border-primary bg-primary/10'
                     : 'hover:bg-muted'
                 )}
@@ -306,6 +328,35 @@ function AskFollowUpComponent({
                 {option}
               </button>
             ))}
+            {/* Other option with text input */}
+            <button
+              onClick={() => {
+                setOtherSelected((prev) => ({ ...prev, [currentQuestion.id]: true }));
+                handleAnswer(otherText[currentQuestion.id] || '');
+              }}
+              className={cn(
+                'w-full px-3 py-2 text-sm text-left border rounded-md transition-colors',
+                otherSelected[currentQuestion.id]
+                  ? 'border-primary bg-primary/10'
+                  : 'hover:bg-muted'
+              )}
+            >
+              Other (type your own)
+            </button>
+            {otherSelected[currentQuestion.id] && (
+              <input
+                type="text"
+                value={otherText[currentQuestion.id] || ''}
+                onChange={(e) => {
+                  setOtherText((prev) => ({ ...prev, [currentQuestion.id]: e.target.value }));
+                  handleAnswer(e.target.value);
+                }}
+                onKeyDown={handleKeyDown}
+                placeholder={currentQuestion.placeholder || 'Type your custom answer...'}
+                className="w-full px-3 py-2 text-sm border rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                autoFocus
+              />
+            )}
           </div>
         )}
 
@@ -340,6 +391,49 @@ function AskFollowUpComponent({
                 </button>
               );
             })}
+            {/* Other option for multiselect */}
+            <button
+              onClick={() => {
+                setOtherSelected((prev) => ({ ...prev, [currentQuestion.id]: !prev[currentQuestion.id] }));
+              }}
+              className={cn(
+                'w-full px-3 py-2 text-sm text-left border rounded-md transition-colors flex items-center gap-2',
+                otherSelected[currentQuestion.id]
+                  ? 'border-primary bg-primary/10'
+                  : 'hover:bg-muted'
+              )}
+            >
+              <div className={cn(
+                'w-4 h-4 border rounded flex items-center justify-center',
+                otherSelected[currentQuestion.id] ? 'bg-primary border-primary' : 'border-muted-foreground'
+              )}>
+                {otherSelected[currentQuestion.id] && <CheckIcon className="w-3 h-3 text-primary-foreground" />}
+              </div>
+              Other (type your own)
+            </button>
+            {otherSelected[currentQuestion.id] && (
+              <input
+                type="text"
+                value={otherText[currentQuestion.id] || ''}
+                onChange={(e) => {
+                  const customValue = e.target.value;
+                  setOtherText((prev) => ({ ...prev, [currentQuestion.id]: customValue }));
+                  // Add/update custom value in the answers array
+                  const current = answers[currentQuestion.id] as string[] || [];
+                  const prevCustom = otherText[currentQuestion.id];
+                  const filtered = current.filter((v) => v !== prevCustom);
+                  if (customValue) {
+                    handleAnswer([...filtered, customValue]);
+                  } else {
+                    handleAnswer(filtered);
+                  }
+                }}
+                onKeyDown={handleKeyDown}
+                placeholder={currentQuestion.placeholder || 'Type your custom answer...'}
+                className="w-full px-3 py-2 text-sm border rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                autoFocus
+              />
+            )}
           </div>
         )}
 
@@ -385,18 +479,26 @@ function AskFollowUpComponent({
         >
           Back
         </button>
-        <button
-          onClick={handleNext}
-          disabled={currentQuestion.required && !answers[currentQuestion.id]}
-          className={cn(
-            'px-4 py-1.5 text-sm rounded-md transition-colors',
-            currentQuestion.required && !answers[currentQuestion.id]
-              ? 'bg-muted text-muted-foreground cursor-not-allowed'
-              : 'bg-primary text-primary-foreground hover:bg-primary/90'
-          )}
-        >
-          {isLastStep ? 'Submit' : 'Next'}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleSkip}
+            className="px-3 py-1.5 text-sm rounded-md transition-colors text-muted-foreground hover:bg-muted"
+          >
+            Skip
+          </button>
+          <button
+            onClick={handleNext}
+            disabled={currentQuestion.required && !answers[currentQuestion.id]}
+            className={cn(
+              'px-4 py-1.5 text-sm rounded-md transition-colors',
+              currentQuestion.required && !answers[currentQuestion.id]
+                ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                : 'bg-primary text-primary-foreground hover:bg-primary/90'
+            )}
+          >
+            {isLastStep ? 'Submit' : 'Next'}
+          </button>
+        </div>
       </div>
     </div>
   );
