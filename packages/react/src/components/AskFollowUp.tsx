@@ -36,6 +36,89 @@ export interface AskFollowUpOutput {
 }
 
 // ============================================================================
+// Styling Types
+// ============================================================================
+
+export interface AskFollowUpClassNames {
+  /** Root container */
+  root?: string;
+  /** Header section with title/description */
+  header?: string;
+  /** Title text */
+  title?: string;
+  /** Description text */
+  description?: string;
+  /** Progress bar container */
+  progressContainer?: string;
+  /** Individual progress segment */
+  progressSegment?: string;
+  /** Progress segment when completed */
+  progressSegmentCompleted?: string;
+  /** Progress segment when active */
+  progressSegmentActive?: string;
+  /** Progress segment when pending */
+  progressSegmentPending?: string;
+  /** Progress text (e.g., "Question 1 of 3") */
+  progressText?: string;
+  /** Question container */
+  questionContainer?: string;
+  /** Question label */
+  questionLabel?: string;
+  /** Required indicator */
+  requiredIndicator?: string;
+  /** Text input field */
+  textInput?: string;
+  /** Option button (for select/multiselect) */
+  optionButton?: string;
+  /** Option button when selected */
+  optionButtonSelected?: string;
+  /** Checkbox in multiselect */
+  checkbox?: string;
+  /** Checkbox when checked */
+  checkboxChecked?: string;
+  /** Boolean button container */
+  booleanContainer?: string;
+  /** Boolean button */
+  booleanButton?: string;
+  /** Boolean button when selected */
+  booleanButtonSelected?: string;
+  /** Actions container (Back/Skip/Next buttons) */
+  actionsContainer?: string;
+  /** Back button */
+  backButton?: string;
+  /** Back button when disabled */
+  backButtonDisabled?: string;
+  /** Skip button */
+  skipButton?: string;
+  /** Next/Submit button */
+  nextButton?: string;
+  /** Next button when disabled */
+  nextButtonDisabled?: string;
+  /** Completed state container */
+  completedContainer?: string;
+  /** Completed icon */
+  completedIcon?: string;
+  /** Completed text */
+  completedText?: string;
+  /** Answer summary item */
+  answerItem?: string;
+  /** Answer question text */
+  answerQuestion?: string;
+  /** Answer value text */
+  answerValue?: string;
+}
+
+// Global classNames configuration
+let globalClassNames: AskFollowUpClassNames = {};
+
+/**
+ * Configure global classNames for all AskFollowUp instances
+ */
+export function configureAskFollowUpStyles(classNames: AskFollowUpClassNames) {
+  globalClassNames = classNames;
+}
+
+// ============================================================================
 // Tool Definition
 // ============================================================================
 
@@ -116,6 +199,7 @@ function AskFollowUpComponent({
   const input = toolCall.input as AskFollowUpInput;
   const questions = useMemo(() => input?.questions || [], [input?.questions]);
   const hasQuestions = questions.length > 0;
+  const styles = globalClassNames;
 
   const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string | string[] | boolean>>(() => {
@@ -227,16 +311,16 @@ function AskFollowUpComponent({
   // Show completed state
   if (isCompleted) {
     return (
-      <div className="border rounded-lg p-4 bg-muted/30">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <CheckIcon className="w-4 h-4 text-green-500" />
+      <div className={cn('border rounded-lg p-4 bg-muted/30', styles.completedContainer)}>
+        <div className={cn('flex items-center gap-2 text-sm text-muted-foreground', styles.completedText)}>
+          <CheckIcon className={cn('w-4 h-4 text-green-500', styles.completedIcon)} />
           <span>Follow-up questions answered</span>
         </div>
         <div className="mt-2 space-y-1">
           {questions.map((q) => (
-            <div key={q.id} className="text-xs">
-              <span className="text-muted-foreground">{q.question}</span>
-              <span className="ml-2 font-medium">
+            <div key={q.id} className={cn('text-xs', styles.answerItem)}>
+              <span className={cn('text-muted-foreground', styles.answerQuestion)}>{q.question}</span>
+              <span className={cn('ml-2 font-medium', styles.answerValue)}>
                 {Array.isArray(answers[q.id])
                   ? (answers[q.id] as string[]).join(', ')
                   : String(answers[q.id])}
@@ -254,46 +338,47 @@ function AskFollowUpComponent({
   }
 
   return (
-    <div className="border rounded-lg overflow-hidden bg-background shadow-sm">
+    <div className={cn('border rounded-lg overflow-hidden bg-background shadow-sm', styles.root)}>
       {/* Header */}
       {(input.title || input.description) && (
-        <div className="px-4 py-3 border-b bg-muted/30">
+        <div className={cn('px-4 py-3 border-b bg-muted/30', styles.header)}>
           {input.title && (
-            <h3 className="font-medium text-sm">{input.title}</h3>
+            <h3 className={cn('font-medium text-sm', styles.title)}>{input.title}</h3>
           )}
           {input.description && (
-            <p className="text-xs text-muted-foreground mt-1">{input.description}</p>
+            <p className={cn('text-xs text-muted-foreground mt-1', styles.description)}>{input.description}</p>
           )}
         </div>
       )}
 
       {/* Progress indicator */}
-      <div className="px-4 pt-3">
+      <div className={cn('px-4 pt-3', styles.progressContainer)}>
         <div className="flex items-center gap-1">
           {questions.map((_, idx) => (
             <div
               key={idx}
               className={cn(
                 'h-1 flex-1 rounded-full transition-colors',
+                styles.progressSegment,
                 idx < currentStep
-                  ? 'bg-primary'
+                  ? cn('bg-primary', styles.progressSegmentCompleted)
                   : idx === currentStep
-                    ? 'bg-primary/50'
-                    : 'bg-muted'
+                    ? cn('bg-primary/50', styles.progressSegmentActive)
+                    : cn('bg-muted', styles.progressSegmentPending)
               )}
             />
           ))}
         </div>
-        <p className="text-xs text-muted-foreground mt-2">
+        <p className={cn('text-xs text-muted-foreground mt-2', styles.progressText)}>
           Question {currentStep + 1} of {questions.length}
         </p>
       </div>
 
       {/* Question */}
-      <div className="p-4">
-        <label className="block text-sm font-medium mb-3">
+      <div className={cn('p-4', styles.questionContainer)}>
+        <label className={cn('block text-sm font-medium mb-3', styles.questionLabel)}>
           {currentQuestion.question}
-          {currentQuestion.required && <span className="text-destructive ml-1">*</span>}
+          {currentQuestion.required && <span className={cn('text-destructive ml-1', styles.requiredIndicator)}>*</span>}
         </label>
 
         {/* Input based on type */}
@@ -304,7 +389,10 @@ function AskFollowUpComponent({
             onChange={(e) => handleAnswer(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={currentQuestion.placeholder || 'Type your answer...'}
-            className="w-full px-3 py-2 text-sm border rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+            className={cn(
+              'w-full px-3 py-2 text-sm border rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50',
+              styles.textInput
+            )}
             autoFocus
           />
         )}
@@ -320,8 +408,9 @@ function AskFollowUpComponent({
                 }}
                 className={cn(
                   'w-full px-3 py-2 text-sm text-left border rounded-md transition-colors',
+                  styles.optionButton,
                   answers[currentQuestion.id] === option && !otherSelected[currentQuestion.id]
-                    ? 'border-primary bg-primary/10'
+                    ? cn('border-primary bg-primary/10', styles.optionButtonSelected)
                     : 'hover:bg-muted'
                 )}
               >
@@ -336,8 +425,9 @@ function AskFollowUpComponent({
               }}
               className={cn(
                 'w-full px-3 py-2 text-sm text-left border rounded-md transition-colors',
+                styles.optionButton,
                 otherSelected[currentQuestion.id]
-                  ? 'border-primary bg-primary/10'
+                  ? cn('border-primary bg-primary/10', styles.optionButtonSelected)
                   : 'hover:bg-muted'
               )}
             >
@@ -353,7 +443,10 @@ function AskFollowUpComponent({
                 }}
                 onKeyDown={handleKeyDown}
                 placeholder={currentQuestion.placeholder || 'Type your custom answer...'}
-                className="w-full px-3 py-2 text-sm border rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className={cn(
+                  'w-full px-3 py-2 text-sm border rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50',
+                  styles.textInput
+                )}
                 autoFocus
               />
             )}
@@ -376,14 +469,16 @@ function AskFollowUpComponent({
                   }}
                   className={cn(
                     'w-full px-3 py-2 text-sm text-left border rounded-md transition-colors flex items-center gap-2',
+                    styles.optionButton,
                     selected
-                      ? 'border-primary bg-primary/10'
+                      ? cn('border-primary bg-primary/10', styles.optionButtonSelected)
                       : 'hover:bg-muted'
                   )}
                 >
                   <div className={cn(
                     'w-4 h-4 border rounded flex items-center justify-center',
-                    selected ? 'bg-primary border-primary' : 'border-muted-foreground'
+                    styles.checkbox,
+                    selected ? cn('bg-primary border-primary', styles.checkboxChecked) : 'border-muted-foreground'
                   )}>
                     {selected && <CheckIcon className="w-3 h-3 text-primary-foreground" />}
                   </div>
@@ -398,14 +493,16 @@ function AskFollowUpComponent({
               }}
               className={cn(
                 'w-full px-3 py-2 text-sm text-left border rounded-md transition-colors flex items-center gap-2',
+                styles.optionButton,
                 otherSelected[currentQuestion.id]
-                  ? 'border-primary bg-primary/10'
+                  ? cn('border-primary bg-primary/10', styles.optionButtonSelected)
                   : 'hover:bg-muted'
               )}
             >
               <div className={cn(
                 'w-4 h-4 border rounded flex items-center justify-center',
-                otherSelected[currentQuestion.id] ? 'bg-primary border-primary' : 'border-muted-foreground'
+                styles.checkbox,
+                otherSelected[currentQuestion.id] ? cn('bg-primary border-primary', styles.checkboxChecked) : 'border-muted-foreground'
               )}>
                 {otherSelected[currentQuestion.id] && <CheckIcon className="w-3 h-3 text-primary-foreground" />}
               </div>
@@ -430,7 +527,10 @@ function AskFollowUpComponent({
                 }}
                 onKeyDown={handleKeyDown}
                 placeholder={currentQuestion.placeholder || 'Type your custom answer...'}
-                className="w-full px-3 py-2 text-sm border rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className={cn(
+                  'w-full px-3 py-2 text-sm border rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50',
+                  styles.textInput
+                )}
                 autoFocus
               />
             )}
@@ -438,13 +538,14 @@ function AskFollowUpComponent({
         )}
 
         {currentQuestion.type === 'boolean' && (
-          <div className="flex gap-3">
+          <div className={cn('flex gap-3', styles.booleanContainer)}>
             <button
               onClick={() => handleAnswer(true)}
               className={cn(
                 'flex-1 px-4 py-2 text-sm border rounded-md transition-colors',
+                styles.booleanButton,
                 answers[currentQuestion.id] === true
-                  ? 'border-primary bg-primary/10'
+                  ? cn('border-primary bg-primary/10', styles.booleanButtonSelected)
                   : 'hover:bg-muted'
               )}
             >
@@ -454,8 +555,9 @@ function AskFollowUpComponent({
               onClick={() => handleAnswer(false)}
               className={cn(
                 'flex-1 px-4 py-2 text-sm border rounded-md transition-colors',
+                styles.booleanButton,
                 answers[currentQuestion.id] === false
-                  ? 'border-primary bg-primary/10'
+                  ? cn('border-primary bg-primary/10', styles.booleanButtonSelected)
                   : 'hover:bg-muted'
               )}
             >
@@ -466,14 +568,15 @@ function AskFollowUpComponent({
       </div>
 
       {/* Actions */}
-      <div className="px-4 pb-4 flex items-center justify-between">
+      <div className={cn('px-4 pb-4 flex items-center justify-between', styles.actionsContainer)}>
         <button
           onClick={handleBack}
           disabled={currentStep === 0}
           className={cn(
             'px-3 py-1.5 text-sm rounded-md transition-colors',
+            styles.backButton,
             currentStep === 0
-              ? 'text-muted-foreground cursor-not-allowed'
+              ? cn('text-muted-foreground cursor-not-allowed', styles.backButtonDisabled)
               : 'hover:bg-muted'
           )}
         >
@@ -482,7 +585,10 @@ function AskFollowUpComponent({
         <div className="flex items-center gap-2">
           <button
             onClick={handleSkip}
-            className="px-3 py-1.5 text-sm rounded-md transition-colors text-muted-foreground hover:bg-muted"
+            className={cn(
+              'px-3 py-1.5 text-sm rounded-md transition-colors text-muted-foreground hover:bg-muted',
+              styles.skipButton
+            )}
           >
             Skip
           </button>
@@ -491,8 +597,9 @@ function AskFollowUpComponent({
             disabled={currentQuestion.required && !answers[currentQuestion.id]}
             className={cn(
               'px-4 py-1.5 text-sm rounded-md transition-colors',
+              styles.nextButton,
               currentQuestion.required && !answers[currentQuestion.id]
-                ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                ? cn('bg-muted text-muted-foreground cursor-not-allowed', styles.nextButtonDisabled)
                 : 'bg-primary text-primary-foreground hover:bg-primary/90'
             )}
           >
